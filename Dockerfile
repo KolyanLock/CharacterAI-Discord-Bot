@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0-focal AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:7.0-bullseye-slim AS build-env
 WORKDIR /app
 
 # Копирование csproj-файлов и восстановление зависимостей
