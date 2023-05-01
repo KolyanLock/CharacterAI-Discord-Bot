@@ -7,7 +7,7 @@ RUN dotnet restore
 
 # Копирование всего остального и сборка
 COPY . ./
-RUN dotnet publish -c Release -o out
+RUN dotnet publish -c Release -r linux-x64 --self-contained true --ready-to-run true --trim-unused true -o out
 
 # Создание образа runtime
 FROM mcr.microsoft.com/playwright:bionic
