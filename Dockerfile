@@ -10,7 +10,7 @@ COPY . ./
 RUN dotnet publish -c Release -o out
 
 # Создание образа runtime
-FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-bionic
+FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-bullseye-slim
 WORKDIR /app
 
 # Установка зависимостей, необходимых для puppeteer chrome
