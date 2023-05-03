@@ -8,10 +8,6 @@ An unofficial Discord integration with a CharacterAI service which you can use t
 3. Create folder temp in the folder with publish build then copy folder storage to the temp folder ( it should turn out like this /temp/stprage). <br>
 4. Copy Dockerfile to the folder with publish build.**
 
-
-For use Dockerfile build publish fre
-An unofficial Discord integration with a [CharacterAI](https://beta.character.ai/) service which you can use to add any character on your own Discord server.
-
 <div align="center">
     
 ![Logo](https://user-images.githubusercontent.com/55811932/224168501-48e81f64-9b2f-442c-a8fe-6ecab8d7aab2.png)<br>
