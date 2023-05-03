@@ -289,7 +289,7 @@ namespace CharacterAI_Discord_Bot.Service
 
         public static dynamic? GetConfig()
         {
-            var path = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "Config.json";
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "Config.json");
             using StreamReader configJson = new(path);
             try
             {
