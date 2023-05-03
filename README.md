@@ -2,10 +2,10 @@
 I added a message buffer and now the character "sees" the whole chat. I also added a timer for the character to write when there is no activity in the chat and a message counter when there is no activity. DEAD_CHAT_MESSAGE - no one has written a message for how many minutes.
 An unofficial Discord integration with a CharacterAI service which you can use to add any character on your own Discord server.
 
-**For use Dockerfile:
-1build publish net7.0 linux x64 framework-dependent Produce single file. 
-2. Copy the Confil.json file to the folder to the folder with publish build. 
-3. Create folder temp in the folder with publish build then copy folder storage to the temp folder ( it should turn out like this /temp/stprage). 
+**For use Dockerfile:**
+1. build publish net7.0 linux x64 framework-dependent Produce single file. <br>
+2. Copy the Confil.json file to the folder to the folder with publish build. <br>
+3. Create folder temp in the folder with publish build then copy folder storage to the temp folder ( it should turn out like this /temp/stprage). <br>
 4. Copy Dockerfile to the folder with publish build.**
 
 
