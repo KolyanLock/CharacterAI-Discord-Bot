@@ -21,6 +21,7 @@ namespace CharacterAI_Discord_Bot.Models
             AuthorId = authorId;
             GuestsList = new();
             Data = new(historyId, characterId);
+            LastMessageTime = DateTime.Now;
         }
     }
 
