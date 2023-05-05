@@ -456,62 +456,74 @@ namespace CharacterAI_Discord_Bot.Handlers
         {
             int inactiveMessageCount = BotConfig.InactiveMessageCount;
             string deadChatMessage = BotConfig.DeadChatMessage;
+            bool isIterationFailed = false;
             Console.WriteLine("deadChatMessage: " + deadChatMessage); ;
 
             while (true)
             {
-                // Подождать 5 минут
-                await Task.Delay(TimeSpan.FromMinutes(BotConfig.MessageTimeoutMins));
+                if (!isIterationFailed)
+                    // Подождать 5 минут
+                    await Task.Delay(TimeSpan.FromMinutes(BotConfig.MessageTimeoutMins));
 
                 // Получить текущее время
                 var currentTime = DateTime.Now;
 
-                // Проверить все каналы
-                foreach (var channel in Channels)
+                try
                 {
-                    if (channel.MessagesTextBuffer is null || channel.IncactiveMessageCount > inactiveMessageCount) continue;
-                    Console.WriteLine("Timuout: " + (currentTime - channel.LastMessageTime).TotalMinutes);
-                    Console.WriteLine("channel.IncactiveMessageCount: " + channel.IncactiveMessageCount);
-                    // Если канал был неактивен в течение MessageTimeoutMins минут
-                    if ((currentTime - channel.LastMessageTime).TotalMinutes >= channel.MessageTimeoutMins)
+                    // Проверить все каналы
+                    foreach (var channel in Channels)
                     {
-                        int MessageTimeoutMins = channel.MessageTimeoutMins;
-                        channel.MessageTimeoutMins *= 6;
-
-                        if (channel.MessagesTextBuffer.Length == 0 && channel.IncactiveMessageCount == 0)
+                        if (channel.MessagesTextBuffer is null || channel.IncactiveMessageCount > inactiveMessageCount) continue;
+                        Console.WriteLine("Timuout: " + (currentTime - channel.LastMessageTime).TotalMinutes);
+                        Console.WriteLine("channel.IncactiveMessageCount: " + channel.IncactiveMessageCount);
+                        // Если канал был неактивен в течение MessageTimeoutMins минут
+                        if ((currentTime - channel.LastMessageTime).TotalMinutes >= channel.MessageTimeoutMins)
                         {
+                            int MessageTimeoutMins = channel.MessageTimeoutMins;
+                            channel.MessageTimeoutMins *= 6;
+
+                            if (channel.MessagesTextBuffer.Length == 0 && channel.IncactiveMessageCount == 0)
+                            {
+                                channel.IncactiveMessageCount++;
+                                continue;
+                            }
+
                             channel.IncactiveMessageCount++;
-                            continue;
-                        }
-                        
-                        channel.IncactiveMessageCount++;
 
-                        var discordChannel = await _client.GetChannelAsync(channel.Id) as SocketTextChannel;
-                        string text = null;
-                        lock (channel.MessagesTextBuffer)
-                            if (channel.MessagesTextBuffer.Length > 0)
+                            var discordChannel = await _client.GetChannelAsync(channel.Id) as SocketTextChannel;
+                            string text = null;
+                            lock (channel.MessagesTextBuffer)
+                                if (channel.MessagesTextBuffer.Length > 0)
+                                {
+                                    text = channel.MessagesTextBuffer.ToString();
+                                    channel.MessagesTextBuffer.Clear();
+                                }
+                                else
+                                {
+                                    text = $"{deadChatMessage} {MessageTimeoutMins} минут";
+                                    Console.WriteLine(text);
+                                }
+                            // Вызвать метод CallCharacterAsync
+                            using (discordChannel.EnterTypingState())
                             {
-                                text = channel.MessagesTextBuffer.ToString();
-                                channel.MessagesTextBuffer.Clear();
+                                var response = await CurrentIntegration.CallCharacterAsync(text, null, channel.Data.HistoryId);
+                                if (!response.IsSuccessful)
+                                    await discordChannel.SendMessageAsync(response.ErrorReason).ConfigureAwait(false);
+                                else
+                                {
+                                    await discordChannel.SendMessageAsync(response.Replies.First().Text).ConfigureAwait(false);
+                                }
                             }
-                            else
-                            {
-                                text = $"{deadChatMessage} {MessageTimeoutMins} минут";
-                                Console.WriteLine(text);
-                            }
-                        // Вызвать метод CallCharacterAsync
-                        using (discordChannel.EnterTypingState())
-                        {
-                            var response = await CurrentIntegration.CallCharacterAsync(text, null, channel.Data.HistoryId);
-                            if (!response.IsSuccessful)
-                                await discordChannel.SendMessageAsync(response.ErrorReason).ConfigureAwait(false);
-                            else
-                            {
-                                await discordChannel.SendMessageAsync(response.Replies.First().Text).ConfigureAwait(false);
-                            }
+                            channel.LastMessageTime = DateTime.Now;
                         }
-                        channel.LastMessageTime = DateTime.Now;
                     }
+                    isIterationFailed = false;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    isIterationFailed = true;
+                    continue;
                 }
             }
         }
