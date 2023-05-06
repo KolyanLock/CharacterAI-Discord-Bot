@@ -193,8 +193,14 @@ namespace CharacterAI_Discord_Bot.Handlers
                 if (currentBotChannel.Data.SkipMessages > 0)
                     currentBotChannel.Data.SkipMessages--;
                 else
-                    using (message.Channel.EnterTypingState())
-                        _ = TryToCallCharacterAsync(context, currentBotChannel, isDM || isPrivate);
+                {
+                    var typing = context.Channel.EnterTypingState();
+                    try { _ = TryToCallCharacterAsync(context, currentBotChannel, isDM || isPrivate); }
+                    catch (Exception e) { Failure(e.ToString()); }
+
+                    await Task.Delay(2500);
+                    typing.Dispose();
+                }
             }
 
         }
@@ -325,7 +331,7 @@ namespace CharacterAI_Discord_Bot.Handlers
                     _ = message.ModifyAsync(msg => { msg.Content = $"⚠ Somethinh went wrong!"; });
                     return;
                 }
-                currentChannel.Data.LastCall.RepliesList.AddRange(response.Replies);
+                currentChannel.Data.LastCall!.RepliesList.Add(response.Response!);
             }
             var newReply = currentChannel.Data.LastCall.RepliesList[currentChannel.Data.LastCall.CurrentReplyIndex];
             currentChannel.Data.LastCall.CurrentPrimaryMsgId = newReply.Id;
@@ -500,18 +506,18 @@ namespace CharacterAI_Discord_Bot.Handlers
                                 }
                                 else
                                 {
-                                    text = $"{deadChatMessage} {MessageTimeoutMins} минут";
+                                    text = deadChatMessage.Replace("{MessageTimeoutMins}", MessageTimeoutMins.ToString());
                                     Console.WriteLine(text);
                                 }
                             // Вызвать метод CallCharacterAsync
                             using (discordChannel.EnterTypingState())
                             {
-                                var response = await CurrentIntegration.CallCharacterAsync(text, null, channel.Data.HistoryId);
+                                var response = await CurrentIntegration.CallCharacterAsync(message: text, historyId: channel.Data.HistoryId);
                                 if (!response.IsSuccessful)
                                     await discordChannel.SendMessageAsync(response.ErrorReason).ConfigureAwait(false);
                                 else
                                 {
-                                    await discordChannel.SendMessageAsync(response.Replies.First().Text).ConfigureAwait(false);
+                                    await discordChannel.SendMessageAsync(response.Response.Text).ConfigureAwait(false);
                                 }
                             }
                             channel.LastMessageTime = DateTime.Now;
