@@ -110,7 +110,19 @@ namespace CharacterAI_Discord_Bot.Handlers
                     if (isPrivate) return;
 
                     string? historyId = null;
-                    var serverChannel = Channels.FirstOrDefault(c => context.Guild.Channels.Any(gc => gc.Id == c.Id));
+                    Models.Channel serverChannel = null;
+
+                    if (ServerIds.Contains(context.Guild.Id))
+                    {
+                        foreach (var guildId in ServerIds)
+                        {
+                            serverChannel = Channels.FirstOrDefault(c => _client.GetGuild(guildId).Channels.Any(gc => gc.Id == c.Id));
+                            if (serverChannel != null) break;
+                        }
+                    }
+                    else
+                        serverChannel = Channels.FirstOrDefault(c => context.Guild.Channels.Any(gc => gc.Id == c.Id));
+
                     if (serverChannel != null)
                     {
                         historyId = serverChannel.Data.HistoryId;
