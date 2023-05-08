@@ -35,7 +35,7 @@ namespace CharacterAI_Discord_Bot.Service
                 Log("Restored channels: ");
                 Success(handler.Channels.Count.ToString());
             }
-            else handler.Channels.Clear();                
+            else handler.Channels.Clear();
 
             SaveData(channels: handler.Channels);
 
@@ -86,24 +86,59 @@ namespace CharacterAI_Discord_Bot.Service
 
         public static async Task ResetCharacterAsync(CommandsHandler handler, SocketCommandContext context)
         {
-            var newHistoryId = await handler.CurrentIntegration.CreateNewChatAsync();
-            if (newHistoryId is null) return;
+            var cI = handler.CurrentIntegration;
+            var newHistoryId = await cI.CreateNewChatAsync();
 
-            var currentChannel = handler.Channels.Find(c => c.Id == context.Channel.Id);
-            var newChannel = new Channel(context.Channel.Id, context.User.Id, newHistoryId, handler.CurrentIntegration.CurrentCharacter.Id!);
-
-            if (currentChannel is not null)
+            if (newHistoryId is null)
             {
-                newChannel.GuestsList = currentChannel.GuestsList;
-                newChannel.Data.AudienceMode = currentChannel.Data.AudienceMode;
-                handler.Channels.Remove(currentChannel);
+                await context.Channel.SendMessageAsync($"{WARN_SIGN_DISCORD} Failed to create new chat history. Try again.").ConfigureAwait(false);
+                return;
             }
 
-            handler.Channels.Add(newChannel);
+            var currentChannel = handler.Channels.Find(c => c.Id == context.Channel.Id);
 
-            SaveData(handler.Channels);
+            if (currentChannel is null) return;
 
-            await context.Channel.SendMessageAsync(handler.CurrentIntegration.CurrentCharacter.Greeting!);
+            lock (handler.Channels)
+            {
+                if (context.Channel is SocketGuildChannel guildChannel)
+                {
+                    if (ServerIds.Contains(context.Guild.Id))
+                    {
+                        foreach (var channel in handler.Channels)
+                        {
+                            foreach (var guildId in ServerIds)
+                            {
+                                var guild = context.Client.GetGuild(guildId);
+                                if (guild.Channels.Any(c => c.Id == channel.Id))
+                                {
+                                    channel.Data.HistoryId = newHistoryId;
+                                    channel.AuthorId = context.User.Id;
+                                    if (channel.MessagesTextBuffer != null)
+                                        channel.MessagesTextBuffer.Clear();
+                                }
+                            }
+                        }
+                    }
+                    else
+                        foreach (var channel in handler.Channels)
+                        {
+                            if (!guildChannel.Guild.Channels.Any(c => c.Id == channel.Id)) continue;
+                            channel.Data.HistoryId = newHistoryId;
+                            channel.AuthorId = context.User.Id;
+                            if (channel.MessagesTextBuffer != null)
+                                channel.MessagesTextBuffer.Clear();
+                        }
+                }
+                else
+                {
+                    currentChannel.Data.HistoryId = newHistoryId;
+                }
+
+                SaveData(handler.Channels);
+            }
+
+            await context.Channel.SendMessageAsync(handler.CurrentIntegration.CurrentCharacter.Greeting!).ConfigureAwait(false);
         }
 
         public static async Task CreatePrivateChatAsync(CommandsHandler handler, SocketCommandContext context)
@@ -140,7 +175,7 @@ namespace CharacterAI_Discord_Bot.Service
         {
             var category = context.Guild.CategoryChannels.FirstOrDefault(c => c.Name == categoryName);
             if (category is not null) return category.Id;
-            
+
             var newCategory = (await context.Guild.CreateCategoryChannelAsync(categoryName, c =>
             {
                 var perms = new List<Overwrite>();
@@ -230,14 +265,14 @@ namespace CharacterAI_Discord_Bot.Service
                 status = integration.CurrentCharacter.IsEmpty ? "No character selected" : integration.CurrentCharacter.Title;
             else if (status == "0")
                 status = null;
-            
+
             await client.SetGameAsync(status, type: (ActivityType)type).ConfigureAwait(false);
         }
 
         public static Task NoPermissionAlert(SocketCommandContext context)
         {
             if (string.IsNullOrEmpty(nopowerPath) || !File.Exists(nopowerPath)) return Task.CompletedTask;
-            
+
             var mRef = new MessageReference(context.Message.Id);
             _ = context.Channel.SendFileAsync(nopowerPath, messageReference: mRef).ConfigureAwait(false);
 

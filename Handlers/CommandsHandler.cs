@@ -75,7 +75,6 @@ namespace CharacterAI_Discord_Bot.Handlers
                     }
 
                     botChannel.LastMessageTime = DateTime.Now;
-                    botChannel.MessageTimeoutMins = BotConfig.MessageTimeoutMins;
                     botChannel.MessagesTextBuffer = new StringBuilder();
                 }
             }
@@ -100,7 +99,7 @@ namespace CharacterAI_Discord_Bot.Handlers
             bool isDM = context.Guild is null;
             bool hasMention = isDM || message.Content.Contains($"<@{_client.CurrentUser.Id}>");
             bool hasPrefix = hasMention || prefixes.Any(p => message.HasStringPrefix(p, ref argPos));
-            bool hasReply = hasPrefix || message.ReferencedMessage?.Author.Id == _client.CurrentUser.Id; // IT'S SO FUCKING BIG UUUGHH!
+            bool hasReply = hasPrefix || message.ReferencedMessage?.Author.Id == _client.CurrentUser.Id;
             bool randomReply = hasReply || (ReplyChance >= randomNumber.Next(100) + 1);
             bool userIsHunted = randomReply || (HuntedUsers.ContainsKey(authorId) && HuntedUsers[authorId] >= randomNumber.Next(100) + 1);
 
@@ -111,8 +110,13 @@ namespace CharacterAI_Discord_Bot.Handlers
                     if (isPrivate) return;
 
                     string? historyId = null;
-                    historyId = await cI.CreateNewChatAsync();
-                    historyId ??= cI.Chats[0];
+                    var serverChannel = Channels.FirstOrDefault(c => context.Guild.Channels.Any(gc => gc.Id == c.Id));
+                    if (serverChannel != null)
+                    {
+                        historyId = serverChannel.Data.HistoryId;
+                    }
+                    else
+                        historyId = await cI.CreateNewChatAsync();
 
                     currentBotChannel = new Models.Channel(context.Channel.Id, context.User.Id, historyId, cI.CurrentCharacter.Id!);
 
@@ -121,8 +125,6 @@ namespace CharacterAI_Discord_Bot.Handlers
                 }
 
                 currentBotChannel.LastMessageTime = DateTime.Now;
-                currentBotChannel.IncactiveMessageCount = 0;
-                currentBotChannel.MessageTimeoutMins = BotConfig.MessageTimeoutMins;
 
                 string text = RemoveMention(context.Message.Content);
 
@@ -135,15 +137,13 @@ namespace CharacterAI_Discord_Bot.Handlers
 
                 if (currentBotChannel.MessagesTextBuffer is null)
                 {
-                    currentBotChannel.MessagesTextBuffer = new StringBuilder(text);
+                    currentBotChannel.MessagesTextBuffer = new StringBuilder(GetChatInfo(context.Message));
                 }
                 lock (currentBotChannel.MessagesTextBuffer)
                 {
                     if (currentBotChannel.MessagesTextBuffer.Length == 0)
-
-                        currentBotChannel.MessagesTextBuffer.Append(text);
-                    else
-                        currentBotChannel.MessagesTextBuffer.Append("\n\n" + text);
+                        currentBotChannel.MessagesTextBuffer.Append(GetChatInfo(context.Message));
+                    currentBotChannel.MessagesTextBuffer.Append("\n\n" + text);
                 }
             }
 
@@ -178,11 +178,7 @@ namespace CharacterAI_Discord_Bot.Handlers
 
                 if (currentBotChannel is null)
                 {
-                    if (isPrivate) return;
-
-                    string? historyId = null;
-                    historyId = await cI.CreateNewChatAsync();
-                    historyId ??= cI.Chats[0];
+                    string historyId = await cI.CreateNewChatAsync();
 
                     currentBotChannel = new Models.Channel(context.Channel.Id, context.User.Id, historyId, cI.CurrentCharacter.Id!);
 
@@ -194,12 +190,9 @@ namespace CharacterAI_Discord_Bot.Handlers
                     currentBotChannel.Data.SkipMessages--;
                 else
                 {
-                    var typing = context.Channel.EnterTypingState();
-                    try { _ = TryToCallCharacterAsync(context, currentBotChannel, isDM || isPrivate); }
-                    catch (Exception e) { Failure(e.ToString()); }
-
-                    await Task.Delay(2500);
-                    typing.Dispose();
+                    using (context.Channel.EnterTypingState())
+                        try { _ = TryToCallCharacterAsync(context, currentBotChannel, isDM || isPrivate); }
+                        catch (Exception e) { Failure(e.ToString()); }
                 }
             }
 
@@ -460,16 +453,14 @@ namespace CharacterAI_Discord_Bot.Handlers
 
         private async Task HandleChannelsTimeout()
         {
-            int inactiveMessageCount = BotConfig.InactiveMessageCount;
-            string deadChatMessage = BotConfig.DeadChatMessage;
+            int MessageTimeoutMins = BotConfig.MessageTimeoutMins;
             bool isIterationFailed = false;
-            Console.WriteLine("deadChatMessage: " + deadChatMessage); ;
 
             while (true)
             {
                 if (!isIterationFailed)
-                    // Подождать 5 минут
-                    await Task.Delay(TimeSpan.FromMinutes(BotConfig.MessageTimeoutMins));
+                    // Подождать 1 минуту
+                    await Task.Delay(TimeSpan.FromMinutes(1));
 
                 // Получить текущее время
                 var currentTime = DateTime.Now;
@@ -479,23 +470,10 @@ namespace CharacterAI_Discord_Bot.Handlers
                     // Проверить все каналы
                     foreach (var channel in Channels)
                     {
-                        if (channel.MessagesTextBuffer is null || channel.IncactiveMessageCount > inactiveMessageCount) continue;
-                        Console.WriteLine("Timuout: " + (currentTime - channel.LastMessageTime).TotalMinutes);
-                        Console.WriteLine("channel.IncactiveMessageCount: " + channel.IncactiveMessageCount);
+                        if (channel.MessagesTextBuffer is null) continue;
                         // Если канал был неактивен в течение MessageTimeoutMins минут
-                        if ((currentTime - channel.LastMessageTime).TotalMinutes >= channel.MessageTimeoutMins)
+                        if ((currentTime - channel.LastMessageTime).TotalMinutes >= BotConfig.MessageTimeoutMins)
                         {
-                            int MessageTimeoutMins = channel.MessageTimeoutMins;
-                            channel.MessageTimeoutMins *= 6;
-
-                            if (channel.MessagesTextBuffer.Length == 0 && channel.IncactiveMessageCount == 0)
-                            {
-                                channel.IncactiveMessageCount++;
-                                continue;
-                            }
-
-                            channel.IncactiveMessageCount++;
-
                             var discordChannel = await _client.GetChannelAsync(channel.Id) as SocketTextChannel;
                             string text = null;
                             lock (channel.MessagesTextBuffer)
@@ -506,8 +484,7 @@ namespace CharacterAI_Discord_Bot.Handlers
                                 }
                                 else
                                 {
-                                    text = deadChatMessage.Replace("{MessageTimeoutMins}", MessageTimeoutMins.ToString());
-                                    Console.WriteLine(text);
+                                    continue;
                                 }
                             // Вызвать метод CallCharacterAsync
                             using (discordChannel.EnterTypingState())

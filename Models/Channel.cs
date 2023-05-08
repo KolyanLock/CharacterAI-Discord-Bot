@@ -8,8 +8,6 @@ namespace CharacterAI_Discord_Bot.Models
     {
         internal ulong Id { get; set; }
         internal ulong AuthorId { get; set; }
-        internal int IncactiveMessageCount { get; set; }
-        internal int MessageTimeoutMins { get; set; }
         internal DateTime LastMessageTime { get; set; }
         //internal Queue<IMessage> MessagesBuffer { get; set; }
         internal StringBuilder MessagesTextBuffer { get; set; }
@@ -27,7 +25,7 @@ namespace CharacterAI_Discord_Bot.Models
 
     internal class CharacterDialogData : CommonService
     {
-        internal string HistoryId { get; }
+        internal string HistoryId { get; set; }
         internal string CharacterId { get; }
         internal int AudienceMode { get; set; }
         internal ulong LastCharacterCallMsgId { get; set; } // discord message id

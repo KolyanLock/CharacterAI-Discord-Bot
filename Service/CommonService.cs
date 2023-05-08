@@ -21,6 +21,9 @@ namespace CharacterAI_Discord_Bot.Service
 
         internal static readonly string nopowerPath = _imgPath + _config.Nopower;
         internal static readonly string defaultAvatarPath = _imgPath + "defaultAvatar.png";
+        internal static readonly string WARN_SIGN_DISCORD = ":warning:";
+
+        internal static readonly List<ulong> ServerIds = new List<ulong> { 591598291867664394, 976228178152529941 };
 
         public static async Task AutoSetup(CommandsHandler handler, DiscordSocketClient client)
         {
@@ -191,6 +194,15 @@ namespace CharacterAI_Discord_Bot.Service
                     await Task.Delay(3000);
 
             return false;
+        }
+        public static string GetChatInfo(SocketUserMessage message)
+        {
+            if (message.Channel is not SocketGuildChannel guildChannel) return "";
+
+            string serverName = guildChannel.Guild.Name; // получаем название сервера
+            string channelName = guildChannel.Name; // получаем название канала
+
+            return $"Messages from Discrod server \"{serverName}\" chat channel \"{channelName}\"";
         }
 
         public static string AddQuote(string text, ulong botUserId, string charName, SocketUserMessage message)
