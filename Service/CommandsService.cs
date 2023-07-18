@@ -103,32 +103,32 @@ namespace CharacterAI_Discord_Bot.Service
             {
                 if (context.Channel is SocketGuildChannel guildChannel)
                 {
-                    if (ServerIds.Contains(context.Guild.Id))
+                    //if (ServerIds.Contains(context.Guild.Id))
+                    //{
+                    //    foreach (var channel in handler.Channels)
+                    //    {
+                    //        foreach (var guildId in ServerIds)
+                    //        {
+                    //            var guild = context.Client.GetGuild(guildId);
+                    //            if (guild.Channels.Any(c => c.Id == channel.Id))
+                    //            {
+                    //                channel.Data.HistoryId = newHistoryId;
+                    //                channel.AuthorId = context.User.Id;
+                    //                if (channel.MessagesTextBuffer != null)
+                    //                    channel.MessagesTextBuffer.Clear();
+                    //            }
+                    //        }
+                    //    }
+                    //}
+                    //else
+                    foreach (var channel in handler.Channels)
                     {
-                        foreach (var channel in handler.Channels)
-                        {
-                            foreach (var guildId in ServerIds)
-                            {
-                                var guild = context.Client.GetGuild(guildId);
-                                if (guild.Channels.Any(c => c.Id == channel.Id))
-                                {
-                                    channel.Data.HistoryId = newHistoryId;
-                                    channel.AuthorId = context.User.Id;
-                                    if (channel.MessagesTextBuffer != null)
-                                        channel.MessagesTextBuffer.Clear();
-                                }
-                            }
-                        }
+                        if (!guildChannel.Guild.Channels.Any(c => c.Id == channel.Id)) continue;
+                        channel.Data.HistoryId = newHistoryId;
+                        channel.AuthorId = context.User.Id;
+                        if (channel.MessagesTextBuffer != null)
+                            channel.MessagesTextBuffer.Clear();
                     }
-                    else
-                        foreach (var channel in handler.Channels)
-                        {
-                            if (!guildChannel.Guild.Channels.Any(c => c.Id == channel.Id)) continue;
-                            channel.Data.HistoryId = newHistoryId;
-                            channel.AuthorId = context.User.Id;
-                            if (channel.MessagesTextBuffer != null)
-                                channel.MessagesTextBuffer.Clear();
-                        }
                 }
                 else
                 {

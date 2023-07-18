@@ -23,7 +23,7 @@ namespace CharacterAI_Discord_Bot.Service
         internal static readonly string defaultAvatarPath = _imgPath + "defaultAvatar.png";
         internal static readonly string WARN_SIGN_DISCORD = ":warning:";
 
-        internal static readonly List<ulong> ServerIds = new List<ulong> { 591598291867664394, 976228178152529941 };
+        //internal static readonly List<ulong> ServerIds = new List<ulong> { 591598291867664394, 976228178152529941 };
 
         public static async Task AutoSetup(CommandsHandler handler, DiscordSocketClient client)
         {

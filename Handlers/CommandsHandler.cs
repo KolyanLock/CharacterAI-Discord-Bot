@@ -112,16 +112,16 @@ namespace CharacterAI_Discord_Bot.Handlers
                     string? historyId = null;
                     Models.Channel serverChannel = null;
 
-                    if (ServerIds.Contains(context.Guild.Id))
-                    {
-                        foreach (var guildId in ServerIds)
-                        {
-                            serverChannel = Channels.FirstOrDefault(c => _client.GetGuild(guildId).Channels.Any(gc => gc.Id == c.Id));
-                            if (serverChannel != null) break;
-                        }
-                    }
-                    else
-                        serverChannel = Channels.FirstOrDefault(c => context.Guild.Channels.Any(gc => gc.Id == c.Id));
+                    //if (ServerIds.Contains(context.Guild.Id))
+                    //{
+                    //    foreach (var guildId in ServerIds)
+                    //    {
+                    //        serverChannel = Channels.FirstOrDefault(c => _client.GetGuild(guildId).Channels.Any(gc => gc.Id == c.Id));
+                    //        if (serverChannel != null) break;
+                    //    }
+                    //}
+                    //else
+                    serverChannel = Channels.FirstOrDefault(c => context.Guild.Channels.Any(gc => gc.Id == c.Id));
 
                     if (serverChannel != null)
                     {
